@@ -2,25 +2,463 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Revenue Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Revenue Cloud Quiz</title>
   <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1f2328;
+      --muted: #656d76;
+      --border: #d0d7de;
+      --accent: #0b63ce;
+      --accent-text: #ffffff;
+      --hover: #eef3fb;
+      --ok-bg: #d3f5dc;
+      --ok-border: #1a7f37;
+      --bad-bg: #ffd8d6;
+      --bad-border: #cf222e;
+      --sel-bg: #dbe9ff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --card: #1a1d23;
+        --text: #e6e8eb;
+        --muted: #9aa3ad;
+        --border: #343a43;
+        --accent: #4c8dff;
+        --accent-text: #0f1115;
+        --hover: #232832;
+        --ok-bg: #12391f;
+        --ok-border: #3fb950;
+        --bad-bg: #4a1517;
+        --bad-border: #f85149;
+        --sel-bg: #1d3157;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
       min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      padding-top: max(10px, env(safe-area-inset-top));
+    }
+    .bar {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h1 { font-size: 1.05rem; margin: 0; }
+    .tabs { display: flex; gap: 6px; }
+    .tab {
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 16px;
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+    }
+    .progress {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .progress > div { height: 100%; background: var(--accent); transition: width .2s; }
+    .question { font-size: 1.02rem; margin: 0 0 16px; overflow-wrap: anywhere; }
+
+    .options { display: flex; flex-direction: column; gap: 10px; }
+    .option {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      width: 100%;
+      min-height: 52px;
+      padding: 12px 14px;
+      text-align: left;
+      font: inherit;
+      color: var(--text);
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      overflow-wrap: anywhere;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .option:not(:disabled):hover { background: var(--hover); }
+    .option:disabled { cursor: default; }
+    .option .key {
+      flex: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
       display: grid;
       place-items: center;
-      font-family: system-ui, sans-serif;
-      background: #f5f5f5;
-      color: #222;
+      font-weight: 600;
+      font-size: 0.85rem;
     }
-    @media (prefers-color-scheme: dark) {
-      body { background: #181818; color: #eee; }
+    .option.selected { background: var(--sel-bg); border-color: var(--accent); }
+    .option.correct { background: var(--ok-bg); border-color: var(--ok-border); }
+    .option.wrong { background: var(--bad-bg); border-color: var(--bad-border); }
+
+    .feedback { margin: 14px 0 0; font-weight: 600; min-height: 1.5em; }
+    .feedback.ok { color: var(--ok-border); }
+    .feedback.bad { color: var(--bad-border); }
+
+    .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .btn {
+      flex: 1 1 auto;
+      min-height: 48px;
+      padding: 10px 18px;
+      font: inherit;
+      font-weight: 600;
+      border-radius: 10px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: var(--accent-text);
+      cursor: pointer;
     }
-    h1 { font-size: clamp(2rem, 8vw, 5rem); }
+    .btn.secondary { background: transparent; color: var(--accent); }
+    .btn:disabled { opacity: .45; cursor: default; }
+
+    .result { text-align: center; }
+    .score { font-size: 2.6rem; font-weight: 700; margin: 8px 0 0; }
+    .percent { font-size: 1.3rem; color: var(--muted); margin: 0 0 6px; }
+    .review { margin-top: 22px; text-align: left; }
+    .review h2 { font-size: 1rem; margin: 0 0 10px; }
+    .review-item { border-top: 1px solid var(--border); padding: 12px 0; }
+    .review-item p { margin: 0 0 8px; overflow-wrap: anywhere; }
+    .tag {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-top: 6px;
+      border: 1px solid;
+      overflow-wrap: anywhere;
+    }
+    .tag.ok { background: var(--ok-bg); border-color: var(--ok-border); }
+    .tag.bad { background: var(--bad-bg); border-color: var(--bad-border); }
+    .error { color: var(--bad-border); }
   </style>
 </head>
 <body>
-  <h1>Revenue Test</h1>
+  <header>
+    <div class="bar">
+      <h1>Revenue Cloud Quiz</h1>
+      <nav class="tabs">
+        <button class="tab active" data-mode="practice" type="button">Practice</button>
+        <button class="tab" data-mode="test" type="button">Test (60)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="app"><p>Loading questions…</p></main>
+
+  <script>
+    const TEST_SIZE = 60;
+    const app = document.getElementById('app');
+    let questions = [];
+    let mode = 'practice';
+    let practice = null;
+    let test = null;
+
+    function shuffle(list) {
+      const a = list.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // Question text uses **bold**, line breaks and a few LaTeX escapes like \( 10\% \).
+    function format(s) {
+      const clean = s.replace(/\\\(|\\\)/g, '').replace(/\\%/g, '%');
+      return escapeHtml(clean)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    }
+
+    // Some questions appear twice in the file; keep the version with the most complete text.
+    function dedupe(list) {
+      const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const byOptions = new Map();
+      for (const q of list) {
+        if (!q.answer) continue;
+        const key = q.options.map(o => norm(o.text)).sort().join('|');
+        const prev = byOptions.get(key);
+        if (!prev || q.question.length > prev.question.length) byOptions.set(key, q);
+      }
+      return [...byOptions.values()];
+    }
+
+    // Shuffle the options and relabel them A, B, C in their new order.
+    function prepare(q) {
+      return {
+        q,
+        options: shuffle(q.options).map((o, i) => ({
+          label: String.fromCharCode(65 + i),
+          text: o.text,
+          correct: o.key === q.answer,
+        })),
+      };
+    }
+
+    function optionsHtml(item) {
+      return item.options.map((o, i) => `
+        <button class="option" type="button" data-index="${i}">
+          <span class="key">${o.label}</span><span>${format(o.text)}</span>
+        </button>`).join('');
+    }
+
+    /* ---------- Practice mode ---------- */
+
+    function startPractice() {
+      practice = { deck: shuffle(questions), pos: 0, answered: 0, correct: 0, item: null, done: false };
+      nextPractice();
+    }
+
+    function nextPractice() {
+      if (practice.pos >= practice.deck.length) {
+        practice.deck = shuffle(questions);
+        practice.pos = 0;
+      }
+      practice.item = prepare(practice.deck[practice.pos++]);
+      practice.done = false;
+      renderPractice();
+    }
+
+    function renderPractice() {
+      const p = practice;
+      const pct = p.answered ? Math.round((p.correct / p.answered) * 100) : 0;
+      app.innerHTML = `
+        <section class="card">
+          <div class="meta">
+            <span>Question ${p.pos} of ${p.deck.length}</span>
+            <span>Correct: ${p.correct}/${p.answered}${p.answered ? ` (${pct}%)` : ''}</span>
+          </div>
+          <p class="question">${format(p.item.q.question)}</p>
+          <div class="options">${optionsHtml(p.item)}</div>
+          <p class="feedback" aria-live="polite"></p>
+          <div class="actions">
+            <button class="btn" type="button" id="next" disabled>Next question</button>
+          </div>
+        </section>`;
+      app.querySelectorAll('.option').forEach(btn =>
+        btn.addEventListener('click', () => answerPractice(Number(btn.dataset.index))));
+      document.getElementById('next').addEventListener('click', nextPractice);
+    }
+
+    function answerPractice(index) {
+      const p = practice;
+      if (p.done) return;
+      p.done = true;
+      const chosen = p.item.options[index];
+      p.answered++;
+      if (chosen.correct) p.correct++;
+
+      const buttons = app.querySelectorAll('.option');
+      buttons.forEach((btn, i) => {
+        btn.disabled = true;
+        if (p.item.options[i].correct) btn.classList.add('correct');
+      });
+      if (!chosen.correct) buttons[index].classList.add('wrong');
+
+      const fb = app.querySelector('.feedback');
+      fb.textContent = chosen.correct ? 'Correct!' : 'Wrong. The correct answer is marked in green.';
+      fb.className = 'feedback ' + (chosen.correct ? 'ok' : 'bad');
+
+      const pct = Math.round((p.correct / p.answered) * 100);
+      app.querySelector('.meta span:last-child').textContent = `Correct: ${p.correct}/${p.answered} (${pct}%)`;
+
+      const next = document.getElementById('next');
+      next.disabled = false;
+      next.focus({ preventScroll: true });
+    }
+
+    /* ---------- Test mode ---------- */
+
+    function startTest() {
+      const size = Math.min(TEST_SIZE, questions.length);
+      test = { items: shuffle(questions).slice(0, size).map(prepare), choices: [], pos: 0, finished: false };
+      renderTest();
+    }
+
+    function renderTest() {
+      const t = test;
+      const item = t.items[t.pos];
+      const last = t.pos === t.items.length - 1;
+      app.innerHTML = `
+        <section class="card">
+          <div class="meta">
+            <span>Question ${t.pos + 1} of ${t.items.length}</span>
+            <span>Test mode</span>
+          </div>
+          <div class="progress"><div style="width:${(t.pos / t.items.length) * 100}%"></div></div>
+          <p class="question">${format(item.q.question)}</p>
+          <div class="options">${optionsHtml(item)}</div>
+          <div class="actions">
+            <button class="btn" type="button" id="next" disabled>${last ? 'Finish test' : 'Next question'}</button>
+          </div>
+        </section>`;
+      app.querySelectorAll('.option').forEach(btn =>
+        btn.addEventListener('click', () => chooseTest(Number(btn.dataset.index))));
+      document.getElementById('next').addEventListener('click', advanceTest);
+    }
+
+    // In a test the answer isn't revealed; the user can change their choice until they move on.
+    function chooseTest(index) {
+      test.choices[test.pos] = index;
+      app.querySelectorAll('.option').forEach((btn, i) => btn.classList.toggle('selected', i === index));
+      document.getElementById('next').disabled = false;
+    }
+
+    function advanceTest() {
+      if (test.choices[test.pos] === undefined) return;
+      if (test.pos < test.items.length - 1) {
+        test.pos++;
+        renderTest();
+        window.scrollTo(0, 0);
+      } else {
+        test.finished = true;
+        renderResult();
+        window.scrollTo(0, 0);
+      }
+    }
+
+    function renderResult() {
+      const t = test;
+      const mistakes = [];
+      let correct = 0;
+      t.items.forEach((item, i) => {
+        const chosen = item.options[t.choices[i]];
+        if (chosen.correct) correct++;
+        else mistakes.push({ item, chosen, right: item.options.find(o => o.correct) });
+      });
+      const total = t.items.length;
+      const pct = Math.round((correct / total) * 100);
+
+      app.innerHTML = `
+        <section class="card result">
+          <div class="meta"><span>Test finished</span><span></span></div>
+          <p class="score">${correct}/${total} correct</p>
+          <p class="percent">${pct}% right answers</p>
+          <div class="actions">
+            <button class="btn" type="button" id="again">Start new test</button>
+            <button class="btn secondary" type="button" id="practice">Practice mode</button>
+          </div>
+          ${mistakes.length ? `
+            <div class="review">
+              <h2>Your mistakes (${mistakes.length})</h2>
+              ${mistakes.map(m => `
+                <div class="review-item">
+                  <p>${format(m.item.q.question)}</p>
+                  <span class="tag bad">Your answer: ${format(m.chosen.text)}</span>
+                  <span class="tag ok">Correct answer: ${format(m.right.text)}</span>
+                </div>`).join('')}
+            </div>` : ''}
+        </section>`;
+      document.getElementById('again').addEventListener('click', startTest);
+      document.getElementById('practice').addEventListener('click', () => switchMode('practice'));
+    }
+
+    /* ---------- Mode switching ---------- */
+
+    function switchMode(next) {
+      const testInProgress = mode === 'test' && test && !test.finished && test.choices.length > 0;
+      if (next !== mode && testInProgress && !confirm('Leave the test? Your answers will be lost.')) return;
+      mode = next;
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.mode === mode));
+      if (mode === 'practice') startPractice();
+      else startTest();
+      window.scrollTo(0, 0);
+    }
+
+    document.querySelectorAll('.tab').forEach(tab =>
+      tab.addEventListener('click', () => switchMode(tab.dataset.mode)));
+
+    // Keyboard shortcuts on desktop: 1-9 or A-C to answer, Enter for next.
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const buttons = app.querySelectorAll('.option');
+      let index = -1;
+      if (/^[1-9]$/.test(e.key)) index = Number(e.key) - 1;
+      else if (/^[a-z]$/i.test(e.key)) index = e.key.toUpperCase().charCodeAt(0) - 65;
+      if (index >= 0 && index < buttons.length && !buttons[index].disabled) {
+        buttons[index].click();
+      } else if (e.key === 'Enter') {
+        const next = document.getElementById('next');
+        if (next && !next.disabled && document.activeElement !== next) {
+          e.preventDefault();
+          next.click();
+        }
+      }
+    });
+
+    fetch('questions.json')
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        questions = dedupe(data.questions);
+        startPractice();
+      })
+      .catch(err => {
+        app.innerHTML = `<section class="card"><p class="error">Could not load questions.json (${escapeHtml(err.message)}).</p>
+          <p>Open the site through a web server, not by double-clicking the file. For example, run
+          <code>python3 -m http.server</code> in the hello-site folder and open http://localhost:8000.</p></section>`;
+      });
+  </script>
 </body>
 </html>
